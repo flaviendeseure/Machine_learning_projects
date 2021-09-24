@@ -1,0 +1,149 @@
+---
+title: "PW2"
+output: html_PW2
+---
+
+# Practical Work 2
+## Multiple Linear Regression
+### 1)
+```{r}
+# load MASS package
+library(MASS)
+
+# Check the dimensions of the Boston dataset
+dim(Boston)
+```
+### 2)
+```{r}
+#first 400 observations as the training
+train = 1:400
+test = -train
+
+training_data = Boston[train,]
+testing_data = Boston[test,]
+
+dim(training_data)
+dim(testing_data)
+```
+
+### 3)
+```{r}
+plot(training_data$age, training_data$medv,
+     xlab="age", ylab="medv",
+     main="Scatterplot of age vs. medv",
+     col="blue", type="p",pch = 20)
+```
+
+```{r}
+cor(Boston$age, Boston$medv)
+```
+There is no linear relationship between medv
+
+### 4)
+```{r}
+
+```
+
+### 5)
+```{r}
+
+```
+
+### 6)
+```{r}
+
+```
+
+### 7)
+```{r}
+
+```
+
+### 8)
+```{r}
+
+```
+
+### 9)
+```{r}
+
+```
+
+### 10)
+```{r}
+
+```
+
+### 11)
+```{r}
+
+```
+
+### 12)
+```{r}
+
+```
+
+### 13)
+```{r}
+
+```
+
+### 14)
+```{r}
+
+```
+
+### 15)
+```{r}
+
+```
+
+### 16)
+```{r}
+
+```
+
+### 17)
+```{r}
+
+```
+
+### 18)
+```{r}
+
+```
+
+### 19)
+```{r}
+
+```
+
+### 20)
+```{r}
+
+```
+
+### 21)
+```{r}
+
+```
+
+### 22)
+```{r}
+
+```
+
+### 23)
+```{r}
+
+```
+
+### 24)
+```{r}
+
+```
+
+
+## Reporting
+### 25)
