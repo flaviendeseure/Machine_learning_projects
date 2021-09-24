@@ -1,11 +1,11 @@
 ---
-title: "PW2"
-output: html_PW2
+title: "Linear_regression"
+output: html_document
 ---
 
 # Practical Work 2
 ## Multiple Linear Regression
-### 1)
+### 1) Load Boston dataset
 ```{r}
 # load MASS package
 library(MASS)
@@ -13,10 +13,11 @@ library(MASS)
 # Check the dimensions of the Boston dataset
 dim(Boston)
 ```
-### 2)
+
+### 2) Split the dataset into traning set and testing set
 ```{r}
-#first 400 observations as the training
-train = 1:400
+# we use the first 80% observations as the training
+train = 1:as.integer(dim(Boston)[1]*0.80)
 test = -train
 
 training_data = Boston[train,]
@@ -26,124 +27,236 @@ dim(training_data)
 dim(testing_data)
 ```
 
-### 3)
+### 3) Relationship between age and medv
+We plot age vs medv (response) to have a first guess of the answer
+(not a proof)
 ```{r}
 plot(training_data$age, training_data$medv,
      xlab="age", ylab="medv",
      main="Scatterplot of age vs. medv",
      col="blue", type="p",pch = 20)
 ```
-
+Then, we compute the correlations between age (a predictor) and medv (the response)
 ```{r}
-cor(Boston$age, Boston$medv)
+cor(training_data$age, training_data$medv)
 ```
-There is no linear relationship between medv
+There is a weak linear relationship between the predictor age and the response medv because the coefficient of correlation is closer to 0.  
 
-### 4)
+Intuitively, one can think that the age of the owner does not necessarily have a strong influence on the price of the property. Indeed, the professional activity or the family patrimony allows younger people to afford a house of the same value as an older person. 
+
+
+### 4) Fitting a housing prices model in function of age
+First, we run the linear regression model
 ```{r}
-
-```
-
-### 5)
-```{r}
-
-```
-
-### 6)
-```{r}
-
+model_age = lm(medv~age, data=training_data)
+model_age
 ```
 
-### 7)
+We plot the observations and the regression line.
 ```{r}
+plot(training_data$age, training_data$medv,
+     xlab = "Age of the proprietary",
+     ylab = "Median House Value",
+     col = "red",
+     pch = 20)
+abline(model_age, col = "blue", lwd="2")
+```
+As infer above, there is a correlation but the variabilty is important
 
+### 5) Train a more complex model
+Now, we are going to use lstat and age as features to predict the medv target
+In the previous practical work, we check for linearity between lstat and medv and we come to the conclusion that we need to use a logarithm scale to get a stronger linear relationship:
+```{r}
+print(cor(training_data$lstat, training_data$medv))
+plot(log(training_data$lstat), training_data$medv,
+     xlab="lStat", ylab="medv",
+     main=" LogScatterplot of lstat vs. medv",
+     col="blue", type="p",pch = 20)
+```
+```{r}
+print(cor(log(training_data$lstat), training_data$medv))
+plot(log(training_data$lstat), training_data$medv,
+     xlab="lStat", ylab="medv",
+     main=" LogScatterplot of lstat vs. medv",
+     col="blue", type="p",pch = 20)
 ```
 
-### 8)
-```{r}
+PS: We can't do the same transformation for the age predictor because the weak linearship relation comes from the data variability 
 
+```{r}
+model_age_lstat = lm(medv~age+lstat, data=training_data)
+model_age_lstat
 ```
 
-### 9)
-```{r}
 
+### 6) Summary of the model
+```{r}
+summary(model_age_lstat)
 ```
 
-### 10)
-```{r}
+### 7) Whole significant
+We use the Fisher test that was performed by R
+We found a p-value < 2.2e-16, 
+p-value < 0.05 => significant relationship between the predictors (house owner age and  percentage of households with low socioeconomic income) and the response (median house value)
+Thus, we can say that the model as a whole significant
 
+F-statistic: 218.9 => 
+
+
+### 8) Predictors significant
+We use the Student tests that were performed by R
+- age and medv:
+  - t-value = 4.082 (p-value < 0.05) : significant relationship between the owner age and the median house value.
+- lstat and medv:
+  - t-value = -19.134 (p-value < 0.05): significant relationship between the percentage of households with low socioeconomic income and the median house value.
+
+The predictors are both significant.
+
+### 9) Model with all variables of the Boston dataset
+```{r}
+model_all_variables = lm(medv~., data=training_data)
+model_all_variables
 ```
 
-### 11)
+### 10) Model with all variables (but log(lstat)) of the Boston dataset
 ```{r}
-
+model_all_variables_log_lstat = lm(medv~.-lstat+log(lstat), data=training_data)
+model_all_variables_log_lstat
 ```
 
-### 12)
+### 11) Comparison between R^2 from the two models above
 ```{r}
+summary(model_all_variables)$r.squared
+summary(model_all_variables_log_lstat)$r.squared
+```
+The R squared improve;
 
+### 12) Correlation matrix
+```{r}
+cor(training_data)
 ```
 
-### 13)
+### 13) Visualize the correlations
 ```{r}
-
+#install.packages("corrplot")
+```
+```{r}
+library(corrplot)
 ```
 
-### 14)
 ```{r}
+M = cor(training_data)
+corrplot.mixed(M)
+```
+### 14) Correlation between tax and rad
+corr = 0.88
 
+### 15) Run the model again without tax. What happens to the R2 and for the F-statistic?
+```{r}
+model = lm(medv~.-(tax+lstat)+log(lstat), data=training_data)
+summary(model_all_variables_log_lstat)$r.squared
+summary(model)$r.squared
+summary(model_all_variables_log_lstat)$fstatistic["value"]
+summary(model)$fstatistic["value"]
+```
+F-statistic = 218
+F-statistic without tax = 114.3025
+
+R^2 decreased while the F-statistic increased, which means the p-values gets lower and thus the model is more significant without tax.
+
+### 16) MSE
+```{r}
+y = testing_data$medv
+
+# Compute the predicted value for this y (y hat)
+y_hat = predict(model, data.frame(testing_data))
+
+# Now we have both y and y_hat for our testing data. 
+# let's find the mean square error
+error = y-y_hat
+error_squared = error^2
+MSE = mean(error_squared)
+MSE
+```
+## ANOVA
+### 17) How this variable is present in the dataset ?
+```{r}
+str(Boston$chas)
+sum(Boston$chas)
+```
+There are 35 suburbs in this data set bound the Charles river.
+
+### 18) Create Boxplots
+```{r}
+boxplot(Boston$medv~Boston$chas)
+```
+The house near the river have a higer median value.
+
+### 19) Calculate μi and μj
+```{r}
+aggregate(Boston$medv, list(Boston$chas),FUN=mean)
 ```
 
-### 15)
+### 20) ANOVA test of medv whith respect to chas
 ```{r}
-
+aov(medv~chas,data=Boston)
+```
+## Qualitative predictors
+### 21) Model 
+```{r}
+model_crim_chas = lm(medv~crim+chas, data=training_data)
+model_chas = lm(medv~chas, data=training_data)
+model_crim_chas
+```
+```{r}
+summary(model_chas)$fstatistic["value"]
+summary(model_crim_chas)$fstatistic["value"]
+summary(model_chas)$r.squared
+summary(model_crim_chas)$r.squared
 ```
 
-### 16)
 ```{r}
-
+summary(model_chas)
+summary(model_crim_chas)
+```
+```{r}
+print(cor(training_data$chas, training_data$medv))
+plot(training_data$chas, training_data$medv,
+     xlab="chas", ylab="medv",
+     col="blue", type="p",pch = 20)
 ```
 
-### 17)
 ```{r}
-
+print(cor(training_data$crim, training_data$medv))
+plot(training_data$crim, training_data$medv,
+     xlab="crim", ylab="medv",
+     col="blue", type="p",pch = 20)
 ```
-
-### 18)
-```{r}
-
-```
-
-### 19)
-```{r}
-
-```
-
-### 20)
-```{r}
-
-```
-
-### 21)
-```{r}
-
-```
+The presence of the river doesn't add a valuable information for explaining the house price.
 
 ### 22)
 ```{r}
-
+model_all = lm(medv~., data=training_data)
+model_all_without_chas = lm(medv~.-chas, data=training_data)
+summary(model_all)
+summary(model_all_without_chas)
 ```
+Small impact => not significant
 
-### 23)
+## Interaction terms
+### 23) Fit a model with first order interaction term where predictors are lstat and age. Print its summary.
 ```{r}
-
+model_interaction_terms = lm(medv~lstat:age, data=training_data)
+summary(model_interaction_terms)
+model_age_lstat = lm(medv~lstat+age, data=training_data)
+summary(model_age_lstat)
 ```
 
-### 24)
+### 24) Fit a model with all the first order interaction terms
 ```{r}
-
+model_age_lstat = lm(medv~lstat*age, data=training_data)
+summary(model_age_lstat)
 ```
-
 
 ## Reporting
 ### 25)
