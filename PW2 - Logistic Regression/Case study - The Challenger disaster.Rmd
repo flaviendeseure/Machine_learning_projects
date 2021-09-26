@@ -1,0 +1,90 @@
+---
+title: "Case study: The Challenger disaster"
+output: html_notebook
+---
+
+# Case study: The Challenger disaster
+Specifically, we want to address the following questions:
+- Q1. Is the temperature associated with O-ring incidents?
+- Q2. In which way was the temperature affecting the probability of O-ring incidents?
+- Q3. What was the predicted probability of an incidient in an O-ring for the temperature of the launch day?
+
+```{r}
+challenger_dataset <- read.table(url('https://www.mghassany.com/MLcourse/datasets/challenger.txt'), header = TRUE)
+challenger_dataset
+```
+
+Each row has, among others, the following variables:
+
+- ```fail.field```, ```fail.nozzle```: binary variables indicating whether there was an incident with the O-rings in the field joints or in the nozzles of the solid rocket boosters.   
+1 codifies an incident and 0 its absence. On the analysis, we focus on the O-rings of the field joint as being the most determinants for the accident.
+- ```temp```: temperature in the day of launch. Measured in Celsius degrees.
+- ```pres.field```, ```pres.nozzle```: leak-check pressure tests of the O-rings. These tests assured that the rings would seal the joint.
+
+
+## Let's begin by display two scatterplots of ```nfails.field``` (number of total incidents in the field joints) in function of ```temp```
+with all launches and excluding the launches without incident
+```{r}
+require(car)
+
+scatterplot(nfails.field ~ temp, reg.line = lm, smooth = FALSE,
+            boxplots = FALSE, data = challenger_dataset, subset = nfails.field > 0)
+
+scatterplot(nfails.field ~ temp, reg.line = lm, smooth = FALSE,
+            boxplots = FALSE, data = challenger_dataset)
+```
+There is a fundamental problem in using linear regression for this data: the response is not continuous. As a consequence, there is no linearity and the errors around the mean are not normal (indeed, they are strongly non normal). We can check this with the corresponding diagnostic plots:
+
+```{r}
+mod <- lm(nfails.field ~ temp, data = challenger_dataset)
+par(mfrow = 1:2)
+plot(mod, 1)
+plot(mod, 2)
+```
+Although linear regression is not the adequate tool for this data, it is able to detect the obvious difference between the two plots:
+
+1. The trend for launches with incidents is flat, hence suggesting there is no dependence on the temperature. This was one of the arguments behind NASA’s decision of launching the rocket at a temperature of -0.6 degrees.
+2. However, the trend for all launches indicates a clear negative dependence between temperature and number of incident! Think about it in this way: the minimum temperature for a launch without incidents ever recorded was above 18 degrees, and the Challenger was launched at -0.6 without clearly knowing the effects of such low temperatures.  
+   
+   
+Instead of trying to predict the number of incidents, we will concentrate on modeling the probability of expecting at least one incident given the temperature, a simpler but also revealing approach. In other words, we look to estimate the following curve:
+$$p(x)=\mathbb{P}(incident=1|temperature=x)$$
+The technique that solves this problem is the logistic regression. The logistic model in this case is:
+$$\mathbb{P}(incident=1|temperature=x)=logistic(\beta_0+\beta_1x)=\frac{1}{1+\exp^{-(\beta_0+\beta_1x)}}$$
+Let's fit the model to the data
+
+```{r}
+nasa <- glm(fail.field ~ temp,family = "binomial", data=challenger_dataset)
+summary(nasa)
+```
+
+```{r}
+exp(coef(nasa)) # Exponentiated coefficients ("odds ratios")
+```
+
+```{r}
+plot(challenger_dataset$temp, challenger_dataset$fail.field, 
+     xlim = c(-1,30),
+     xlab = "Temperature",
+     ylab = "Incident probability")
+
+# Draw the fitted logistic curve
+x <- seq(-1, 30, l = 200)
+y <- exp(-(nasa$coefficients[1] + nasa$coefficients[2] * x))
+y <- 1 / (1 + y)
+lines(x, y, col = 2, lwd = 2)
+
+# The Challenger
+points(-0.6, 1, pch = 16)
+text(-0.6, 1, labels = "Challenger", pos = 4)
+
+```
+
+```{r}
+confint(nasa, level = 0.95)
+```
+
+```{r}
+predict(nasa, newdata = data.frame(temp = -0.6), type = "response")
+```
+

@@ -4,8 +4,12 @@ output: html_document
 ---
 
 # Practical Work 2
+```{r}
+setwd("C:/Users/flavi/OneDrive/Documents/ESILV/A4/S1/Machine Learning/Machine_learning/PW1 - Linear Regression")
+```
+
 ## Multiple Linear Regression
-### 1) Load Boston dataset
+### 1)  Load the Boston dataset from MASS package
 ```{r}
 # load MASS package
 library(MASS)
@@ -14,9 +18,9 @@ library(MASS)
 dim(Boston)
 ```
 
-### 2) Split the dataset into traning set and testing set
+### 2) Split the dataset into traning set and testing set. (keep all the variables of the Boston data set)
 ```{r}
-# we use the first 80% observations as the training
+# We use the first 80% observations as the training
 train = 1:as.integer(dim(Boston)[1]*0.80)
 test = -train
 
@@ -27,7 +31,7 @@ dim(training_data)
 dim(testing_data)
 ```
 
-### 3) Relationship between age and medv
+### 3) Check if there is a linear relationship between the variables medv and age. (use cor() function)
 We plot age vs medv (response) to have a first guess of the answer
 (not a proof)
 ```{r}
@@ -38,17 +42,32 @@ plot(training_data$age, training_data$medv,
 ```
 Then, we compute the correlations between age (a predictor) and medv (the response)
 ```{r}
-cor(training_data$age, training_data$medv)
-```
-There is a weak linear relationship between the predictor age and the response medv because the coefficient of correlation is closer to 0.  
+# Syntax of the function cor() :
+# corelation = cor(training_data, y = NULL, use = "everything",
+#                 method = c("pearson", "kendall", "spearman"))
 
+cor(training_data$age, training_data$medv,method = "pearson")
+```
+Result : [1] -0.2924247
+
+Interpretation:
+If the correlation is :
+-> near 1 : strong positive correlation
+-> near -1 : strong negative correlation
+-> near 0 : no correlation at all
+
+The result here is -0.2924247 and it's closer to 0. We have a weak negative correlation between the predictor age and the response medv.  
+
+My interpretation:
 Intuitively, one can think that the age of the owner does not necessarily have a strong influence on the price of the property. Indeed, the professional activity or the family patrimony allows younger people to afford a house of the same value as an older person. 
 
 
-### 4) Fitting a housing prices model in function of age
+### 4) Fit a model of housing prices in function of age and plot the observations and the regression line
 First, we run the linear regression model
 ```{r}
-model_age = lm(medv~age, data=training_data)
+# Syntax of the function lm (linear model):
+# model = lm(formula = response ~ predictor, data = data)
+model_age = lm(medv ~ age, data=training_data)
 model_age
 ```
 
@@ -58,20 +77,21 @@ plot(training_data$age, training_data$medv,
      xlab = "Age of the proprietary",
      ylab = "Median House Value",
      col = "red",
+     main = "Scatterplot of age vs. medv with the linear regression line",
      pch = 20)
 abline(model_age, col = "blue", lwd="2")
 ```
-As infer above, there is a correlation but the variabilty is important
+As infer above, there is a small correlation but the variability of the data is important.
 
-### 5) Train a more complex model
+### 5) Train a regression model using both lstat and age as predictors of median house value.
 Now, we are going to use lstat and age as features to predict the medv target
 In the previous practical work, we check for linearity between lstat and medv and we come to the conclusion that we need to use a logarithm scale to get a stronger linear relationship:
 ```{r}
-print(cor(training_data$lstat, training_data$medv))
 plot(log(training_data$lstat), training_data$medv,
      xlab="lStat", ylab="medv",
      main=" LogScatterplot of lstat vs. medv",
      col="blue", type="p",pch = 20)
+print(cor(training_data$lstat, training_data$medv))
 ```
 ```{r}
 print(cor(log(training_data$lstat), training_data$medv))
@@ -80,27 +100,39 @@ plot(log(training_data$lstat), training_data$medv,
      main=" LogScatterplot of lstat vs. medv",
      col="blue", type="p",pch = 20)
 ```
+Correlation coefficient before the log transformation between lstat and medv = -0.7085914
+Correlation coefficient after the log transformation between lstat and medv = -0.7961729
 
-PS: We can't do the same transformation for the age predictor because the weak linearship relation comes from the data variability 
+Note: We can't do the same transformation for the age predictor because the weak linearship relation comes from the data variability 
 
 ```{r}
-model_age_lstat = lm(medv~age+lstat, data=training_data)
+model_age_lstat = lm(medv ~ age+log(lstat), data=training_data)
 model_age_lstat
+```
+```{r}
+# The regression model is a plan not a line, so I use rgl library to get 3D plot:
+library(rgl)
+rgl::plot3d(log(Boston$lstat),Boston$age, Boston$medv, type = "p",)
+rgl.snapshot("rgl.TD2.Q.5")
 ```
 
 
 ### 6) Summary of the model
 ```{r}
+# Print the summary of the obtained regression model :
 summary(model_age_lstat)
 ```
 
-### 7) Whole significant
-We use the Fisher test that was performed by R
-We found a p-value < 2.2e-16, 
-p-value < 0.05 => significant relationship between the predictors (house owner age and  percentage of households with low socioeconomic income) and the response (median house value)
+### 7) # Is the model as a whole significant?
+There are two parameters to take into account for the whole significance:
+- F-statistic: 411.9 =
+- P-value from the Fisher test performed by R
+  We found a p-value < 2.2e-16,  
+  p-value < 0.05 => significant relationship between the predictors (house owner age and  percentage of households with low socioeconomic   income) and the response (median house value)
+  
 Thus, we can say that the model as a whole significant
 
-F-statistic: 218.9 => 
+Adjusted r-squared : closer to 1 : high proportion are explain by the input, 67,1% of variability is explained
 
 
 ### 8) Predictors significant
