@@ -1,0 +1,137 @@
+---
+title: "TD3"
+author: "Yoan Gabison"
+date: "10/1/2021"
+output: html_document
+---
+
+
+### Question 1
+Load Dataset
+```{r}
+df = read.table("Social_Network_Ads.csv", header = TRUE, sep=",")
+df
+```
+
+### Question 2
+```{r}
+str(df)
+```
+
+```{r}
+summary(df)
+```
+
+```{r}
+plot(df)
+```
+
+
+### Question 3
+```{r}
+library(caTools) # install it first in the console
+set.seed(123)
+# we use the function set.seed() with the same seed number
+# to randomly generate the same values, you already know that right? 
+#and you know why we want to generate the same values, am I wrong? 
+split = sample.split(df$Purchased, SplitRatio = 0.75)
+# here we chose the SplitRatio to 75% of the dataset,
+# and 25% for the test set.
+training_set = subset(df, split == TRUE)
+# we use subset to split the dataset
+test_set = subset(df, split == FALSE)
+```
+
+
+### Question 4
+```{r}
+training_set$Age = scale(training_set$Age)
+training_set$EstimatedSalary = scale(training_set$EstimatedSalary)
+summary(training_set)
+
+test_set$Age = scale(test_set$Age)
+test_set$EstimatedSalary = scale(test_set$EstimatedSalary)
+summary(test_set)
+```
+To scale a dataframe means that for each column, we transform the mean to 0 and the standard deviation to 1.
+
+
+### Question 5
+```{r}
+model_purchased_age = glm(Purchased ~ Age, data=training_set, family="binomial")
+model_purchased_age
+```
+
+### Question 6
+Because the variable to predict is either 0 or 1 so it follows a binomial law
+
+
+### Question 7
+$F(X)=logistic(\frac{1}{1+e^{\beta 0 + \beta 1 X}})$
+
+
+### Question 8
+```{r}
+summary(model_purchased_age)
+```
+p-value = 2e-16 < 0.05 => The feature Age is significant.
+
+
+### Question 9
+The value of AIC of the model is 256.11
+
+
+### Question 10
+```{r}
+plot(training_set$Purchased ~ training_set$Age)
+library(ggplot2)
+ggplot(model_purchased_age, aes(x=Age, y=Purchased)) +
+  geom_point() +
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE)
+```
+
+
+
+### Question 11
+```{r}
+model_purchased_age_salary = glm(Purchased ~ (Age + EstimatedSalary), data=training_set, family="binomial")
+model_purchased_age_salary
+```
+
+
+
+### Question 12
+```{r}
+summary(model_purchased_age_salary)
+```
+
+p_value for Age : 2.83e-14 < 0.05 => Significant
+p_value for Estimated Salary : 2.03e09 < 0.05 => Significant
+
+
+
+### Question 13
+We obtain a better model by adding the estimated salary, we can see it by comparing the AIC : 
+With only Age, AIC is 256.11 and by adding estimated salary it is 208.78.
+208.78 < 256.11 => Better model
+
+
+### Question 14
+```{r}
+y_hat = predict(model_purchased_age_salary, newdata = test_set[c("Age","EstimatedSalary")], type="response")
+y_hat
+```
+
+
+### Question 15
+```{r}
+y_hat_0_1 = ifelse(y_hat > 0.5, 1, 0)
+y_hat_0_1
+```
+
+
+### Question 16
+```{r}
+table(y_hat_0_1, test_set$Purchased)
+```
+
