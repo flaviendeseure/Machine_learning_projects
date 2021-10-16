@@ -1,0 +1,307 @@
+---
+title: "Decision_Trees_&_Random_Forest"
+output: html_notebook
+---
+
+# Practical Work 5
+```{r}
+setwd("C:/Users/flavi/OneDrive/Documents/ESILV/A4/S1/Machine Learning/Machine_learning/PW4 - Decision Trees & Random Forests")
+```
+
+
+## Regression Trees
+### Single Tree
+#### 1) Load the Boston dataset from MASS package. Split the dataset randomly in half.
+```{r}
+library(MASS)
+library(caTools)
+set.seed(18)
+Boston_idx = sample(1:nrow(Boston), nrow(Boston) / 2) 
+# You don't know what we just did?
+# open the documentation of the function sample by 
+# writing ?sample in the R console.
+# Note that this is one of the ways to split it randomly and it is not necessary the best.
+Boston_train = Boston[Boston_idx,]
+Boston_test  = Boston[-Boston_idx,]
+```
+
+#### 2) Fit a regression tree to the training data using the rpart() function from the rpart package. Name the tree Boston_tree.
+```{r}
+library(rpart)
+Boston_tree = rpart(medv ~., data=Boston_train)
+Boston_tree
+```
+
+#### 3) Plot the obtained tree using the following code.
+```{r}
+plot(Boston_tree)
+text(Boston_tree, pretty = 0)
+title(main = "Regression Tree")
+```
+
+#### 4) A better plot can be obtained using the rpart.plot18 package. Re-plot the tree using it. You can use the rpart.plot() function which by default, when the output is continuous, each node shows: the predicted value, and the percentage of observations in the node. You can also use the prp() function.
+```{r}
+library(rpart.plot)
+rpart.plot(Boston_tree)
+```
+```{r}
+prp(Boston_tree)
+```
+
+#### 5) Print the obtained tree and print its summary. Between the things that you can see in the summary, the CP (complexity parameter) table and the importance of each variable in the model. Print the CP table using the printcp() function to see the cross validation results. Plot a comparison figure using the plotcp() function.
+```{r}
+summary(Boston_tree)
+```
+
+```{r}
+printcp(Boston_tree)
+```
+
+#### 6) Write a  function that returns the RMSE of two vectors.
+```{r}
+RMSE = function(y, y_hat) {
+  sqrt(mean((y - y_hat) ^ 2))
+}
+```
+
+#### 7) Use the function predict() to predict the response on the test set. Then calculate the RMSE obtained with tree model.
+```{r}
+Boston_tree_predictions = predict(Boston_tree, newdata = Boston_test)
+RMSE(Boston_tree_predictions, Boston_test$medv)
+```
+
+#### 8) Fit a linear regression model on the training set. Then predict the response on the test set using the linear model. Calculate the RMSE and compare the performance of the tree and the linear regression model.
+```{r}
+Boston_lm = lm(medv~., data = Boston_train)
+Boston_lm_predictions = predict(Boston_lm, newdata = Boston_test)
+RMSE(Boston_lm_predictions, Boston_test$medv)
+```
+Let's print the figures
+```{r}
+plot(Boston_tree_predictions, Boston_test$medv,
+     xlab = "Predicted", ylab = "Actual", 
+     main = "Predicted vs Actual for Decision Tree",
+     col = "blue", pch = 20) 
+abline(0, 1, col = "green")
+```
+
+```{r}
+plot(Boston_lm_pred, Boston_test$medv,
+     xlab = "Predicted", ylab = "Actual",
+     main = "Predicted vs Actual for Linear Model",
+     col = "blue", pch = 20)
+abline(0, 1, col = "green")
+```
+
+
+### Bagging
+#### 9) Fit a bagged model, using the randomForest() function from the randomForest package.
+```{r}
+library(randomForest)
+Boston_bagging = randomForest(medv ~ ., data = Boston_train, mtry = ncol(Boston_train)-1)
+```
+
+#### 10) Predict the response on the test set using the bagging model. Calculate the RMSE. Is the performance of the model better than linear regression or a simple tree?
+```{r}
+Boston_bagging_predictions = predict(Boston_bagging, newdata = Boston_test)
+RMSE(Boston_bagging_predictions, Boston_test$medv)
+```
+The RMSE if much lower with bagging than th linear regression and a simple tree.
+
+```{r}
+plot(Boston_bagging, main = "Bagged Trees")
+```
+
+
+### Random Forests
+#### 11) Fit a random forest on the training set and compare its performance with the previous models by calculating the predictions and the RMSE.
+```{r}
+Boston_random_forest = randomForest(medv ~ ., data = Boston_train, mtry = (ncol(Boston_train)-1)/3, importance = TRUE, ntrees = 500)
+Boston_random_forest_predictions = predict(Boston_random_forest, newdata = Boston_test)
+RMSE(Boston_random_forest_predictions, Boston_test$medv)
+```
+
+#### 12) Use the function importance() from the randomForest package to see the most important predictors in the obtained random forest model. What are the three most important predictors? Did you find the same results when you selected the best predictors for the linear regression model during session 2?
+```{r}
+importance(Boston_random_forest)
+```
+```{r}
+summary(Boston_linear_regression)
+```
+The three most important predictors are lstat, rm and crim. It's almost the same most import predictors that for the linear regression model (rm, lstat, dis)
+
+#### 13) Plot the importance of the predictors to the model using the varImpPlot() function.
+```{r}
+varImpPlot(Boston_random_forest)
+```
+
+
+### Boosting
+#### 14) Using the gbm() function like following, fit a boosted model on the training set. Then compare its performance with the previous models by calculating the predictions and the RMSE.
+```{r}
+library(gbm)
+Boston_boost = gbm(medv ~ ., data = Boston_train, distribution = "gaussian", 
+                    n.trees = 5000, interaction.depth = 4, shrinkage = 0.01)
+Boston_boost_predictions = predict(Boston_boost, newdata = Boston_test)
+RMSE(Boston_boost_predictions, Boston_test$medv)
+```
+
+#### 15) Show the summary of the boosted model. A figure of the variable importance will be shown.
+```{r}
+summary(Boston_boost)
+```
+
+
+### Comparison
+#### 16) Reproduce the following comparison: A table in which we show the obtained RMSE with each tested model, you can create a 5×2 data.frame in which you put the names of the models and the corresponding RMSE. To visualize the data frame in the compiled html report you can use the kable() function from the knitr package. Or, compare the models by plotting the Actual (reality) response values against the predicted values.
+```{r}
+library(knitr)
+names <- c("Linear Regression", "Simple tree", "Bagging", "Random Forest", "Boosting")
+rmse <- c(RMSE(Boston_lm_predictions, Boston_test$medv), RMSE(Boston_tree_predictions, Boston_test$medv), RMSE(Boston_bagging_predictions, Boston_test$medv), RMSE(Boston_random_forest_predictions, Boston_test$medv), RMSE(Boston_boost_predictions, Boston_test$medv))
+df = data.frame(names,rmse)
+kable(df)
+```
+```{r}
+par(mfrow=c(2,3))
+plot(Boston_lm_predictions, Boston_test$medv, 
+     xlab = "Predicted", ylab = "Actual", 
+     main = "Linear regression")
+abline(0, 1, col = "green")
+
+plot(Boston_tree_predictions, Boston_test$medv, 
+     xlab = "Predicted", ylab = "Actual", 
+     main = "Single Tree")
+abline(0, 1, col = "green")
+
+plot(Boston_bagging_predictions, Boston_test$medv,
+     xlab = "Predicted", ylab = "Actual",
+     main = "Bagging")
+abline(0, 1, col = "green")
+
+plot(Boston_random_forest_predictions, Boston_test$medv,
+     xlab = "Predicted", ylab = "Actual",
+     main = "Random Forest")
+abline(0, 1, col = "green")
+
+plot(Boston_boost_predictions, Boston_test$medv,
+     xlab = "Predicted", ylab = "Actual",
+     main = "Boosting")
+abline(0, 1, col = "green")
+```
+
+
+
+
+## Classification Trees
+For the rest of this PW, you must:
+Import the spam dataset and explore it. Be aware that it is preferable that the response column is of type factor.
+Split the dataset into training and test sets (choose your own seed when using set.seed()).
+Fit (using rpart and gbm packages):
+A logistic regression model.
+A simple classification tree.
+Bagging, Random Forests22, and Boosting models.
+For each model, predict the response on the test set and evaluate the performance of the model, using the prediction accuracy (create a function that returns the accuracy for two binary vectors).
+### The Spam dataset
+```{r}
+spam = read.csv("spam.csv")
+spam$spam = as.factor(spam$spam)
+spam
+```
+
+```{r}
+str(spam)
+summary(spam)
+```
+
+```{r}
+compute_acc = function(y, y_hat) {
+  mean(y == y_hat)
+}
+```
+
+
+```{r}
+library(caTools)
+set.seed(0)
+split = sample.split(spam$spam, SplitRatio = 0.75)
+training_set = subset(spam, split == TRUE)
+test_set = subset(spam, split == FALSE)
+```
+
+#### Logistic Regression
+```{r}
+spam_logistic_regression <- glm(spam ~ ., family = "binomial", data=training_set)
+summary(spam_logistic_regression)
+```
+```{r}
+spam_logistic_regression_pred = predict(spam_logistic_regression, newdata = test_set, type="response")
+spam_logistic_regression_bin_pred = ifelse(spam_logistic_regression_pred >= 0.5, TRUE,FALSE)
+spam_logistic_regression_acc = compute_acc(spam_logistic_regression_bin_pred, test_set$spam)
+spam_logistic_regression_acc
+```
+
+
+#### Tree
+```{r}
+spam_tree = rpart(spam ~ ., data = training_set)
+rpart.plot(spam_tree)
+```
+```{r}
+spam_tree_pred = predict(spam_tree, newdata = test_set, type="class")
+spam_tree_acc = compute_acc(spam_tree_pred, test_set$spam)
+spam_tree_acc
+```
+
+
+#### Bagging
+```{r}
+spam_bagging = randomForest(spam ~ ., data = training_set, mtry = ncol(spam)-1,
+                        importance = TRUE, ntrees = 500)
+spam_bagging
+```
+```{r}
+spam_bagging_pred = predict(spam_bagging, newdata = test_set, type="class")
+spam_bagging_acc = compute_acc(spam_bagging_pred, test_set$spam)
+spam_bagging_acc
+```
+
+#### Random_forest
+```{r}
+spam_random_forest = randomForest(spam ~ ., data = training_set, mtry = as.integer(sqrt(ncol(spam)-1)),
+                        importance = TRUE, ntrees = 500)
+spam_random_forest
+```
+```{r}
+spam_random_forest_pred = predict(spam_random_forest, newdata = test_set, type="class")
+spam_random_forest_acc = compute_acc(spam_random_forest_pred, test_set$spam)
+spam_random_forest_acc
+```
+
+#### Boosting
+```{r}
+training_set$spam01 = ifelse(training_set$spam == FALSE, 0, 1)
+test_set$spam01 = ifelse(test_set$spam == FALSE, 0, 1)
+# We use a bernoulli distribution because the response is between 0 ou 1
+spam_boosting = gbm(spam01 ~ . - spam, data = training_set, distribution = "bernoulli", 
+                 n.trees = 5000) 
+spam_boosting
+```
+
+```{r}
+spam_boosting_pred = predict(spam_boosting, test_set, type = "response")
+spam_boost_bin_pred = ifelse(spam_boosting_pred >= 0.5, 1,0)
+spam_boosting_acc = compute_acc(spam_boost_bin_pred, test_set$spam01)
+spam_boosting_acc
+```
+
+
+#### Comparison
+```{r}
+accuracies_table = data.frame(
+  Model = c("Logistic Regression", "Single Tree", "Bagging",  "Random Forest",  "Boosting"),
+  TestAccuracy = c(spam_logistic_regression_acc, spam_tree_acc, spam_bagging_acc, spam_random_forest_acc, spam_boosting_acc)
+  )
+
+kable(accuracies_table)
+```
+

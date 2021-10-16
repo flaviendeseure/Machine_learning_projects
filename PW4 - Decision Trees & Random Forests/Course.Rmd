@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Main techniques:
+```{r}
+require(ISLR)
+require(tree)
+attach(Carseats)
+hist(Sales)
+High=ifelse(Sales<=8,"No","Yes")
+Carseats=data.frame(Carseats, High)
+```
+
+Random forests: The first-choice method for most data analyses!  
+- Works well without tuning  
+  - Exception: High dimensional data, low signal-to-noise ratio  
+- No need to scale or recode predictors  
+- Works well on high dimensional data (doesn't take care of noise)  
+- Cannot overfit  
+  - adding trees doesn' hurt generalization error  
+  - training error is not smaller than generalization error  
+- works for any kind of data   
+  - Exception image, NLP, speech   
+- Is an interpretable model  
+  - False, many variable importance measures available  
+- The statistical properties are well understood  
+  - Assumptions might not hold with default settings  
+- The split variable selection is biased  
+- Performance is not state of the art   
+  - Take computation time it's state of the art  
+  - But if you compared with the last methods, not the best  
+- Detects interactions  
+  
+  
+Pros:  
+- Little or no tuning and data recoding required  
+- Good perf on almost any kind of data  
+- Overfitiing not a major problem  
+- Variable importance measures available  
+  
+Cons:  
+- Bad performance on images, speech and NLP  
+- Not per se interpretable  
+- Will not win prediction challenges  
+  
+Fast R implementation:  
+- Rborist: fastest for continuous features and large sample size  
+- ranger: fastest in all other cases  
+- Efficient analysis of genome-wide data with ranger   
+  
+  
+  
+  
