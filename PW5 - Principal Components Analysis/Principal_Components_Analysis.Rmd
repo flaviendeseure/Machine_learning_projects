@@ -1,0 +1,236 @@
+---
+title: "Principal Components Analysis"
+output: html_notebook
+---
+
+## The Iris Dataset
+## Flavien Deseure--Charron
+## 29/10/2021
+## Loading Data
+#### 1. Download the iris dataset from here  and import it into .
+```{r}
+iris = read.table('https://www.mghassany.com/MLcourse/datasets/iris.data', header=T, sep=",")
+iris
+```
+
+
+## Exploratory analysis
+#### 2. Compare the means and the quartiles of the 3 different flower classes for the 4 different features (Plot 4 boxplots into the same figure).
+```{r Fig1, echo=FALSE, fig.height=15, fig.width=15}
+par(mfrow=c(2,2))
+boxplot(iris$sepal_length~iris$class)
+boxplot(iris$sepal_width~iris$class)
+boxplot(iris$petal_length~iris$class)
+boxplot(iris$petal_width~iris$class)
+```
+
+#### 3. To explore how the 3 different flower classes are distributed along the 4 different features, visualize them via histograms using the following code.
+```{r}
+# Let's use the ggplot2 library
+# ggplot2 is the most advanced package for data visualization
+# gg corresponds to The Grammar of Graphics.
+library(ggplot2) #of course you must install it first if you don't have it already
+
+# histogram of sepal_length
+ggplot(iris, aes(x=sepal_length, fill=class)) +
+  geom_histogram(binwidth=.2, alpha=.5)
+# histogram of sepal_width
+ggplot(iris, aes(x=sepal_width, fill=class)) +
+  geom_histogram(binwidth=.2, alpha=.5)
+# histogram of petal_length
+ggplot(iris, aes(x=petal_length, fill=class)) +
+  geom_histogram(binwidth=.2, alpha=.5)
+# histogram of petal_width
+ggplot(iris, aes(x=petal_width, fill=class)) +
+  geom_histogram(binwidth=.2, alpha=.5)
+```
+
+## PCA using princomp()
+#### 4. Apply a PCA on the Iris dataset using the princomp() function and interpret the results.
+```{r}
+pcairis=princomp(iris[,-5], cor=T) 
+
+# Note that we take only the numerical columns to apply PCA.
+# now pcairis is a R object of type princomp
+# To display the internal structure of pcairis
+str(pcairis)
+```
+```{r}
+# To see the variance explained by the the pcs
+summary(pcairis) 
+```
+```{r}
+# To plot the variance explained by each pc
+plot(pcairis) 
+```
+
+```{r}
+# To plot together the scores for PC1 and PC2 and the 
+# variables expressed in terms of PC1 and PC2.
+biplot(pcairis)
+```
+
+## Deeper PCA using factoextra package
+#### 5. Using factoextra package plot the following:
+- The scree plot.
+- The graph of individuals.
+- The graph of variables.
+- The biplot graph.
+- The contributions of the variables to the first 2 principal components.
+```{r}
+library(factoextra)
+```
+##### Screeplot
+```{r}
+fviz_eig(pcairis)
+```
+
+##### The graph of individuals
+```{r}
+ind <- get_pca_ind(pcairis)
+ind
+```
+
+```{r}
+fviz_pca_ind (pcairis, col.ind = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE
+             )
+```
+
+
+##### The graph of variables
+```{r}
+var = get_pca_var(pcairis)
+var
+```
+
+```{r}
+fviz_pca_var(pcairis, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Évite le chevauchement de texte
+             )
+```
+
+
+##### The biplot graph
+```{r}
+fviz_pca_biplot(pcairis, repel = TRUE,
+                col.var = "#2E9FDF", # Couleur des variables
+                col.ind = "#696969"  # Couleur des individues
+                )
+```
+
+```{r}
+fviz_pca_biplot (pcairis,
+                col.ind = iris$class, palette = "jco",
+                addEllipses = TRUE, label = "var",
+                col.var = "black", repel = TRUE,
+                legend.title = "Species")
+```
+
+
+##### The contributions of the variables to the first 2 principal components
+```{r}
+fviz_contrib(pcairis, choice = "var", axes = 1:2)
+```
+
+## Step-by-step PCA
+1. Normalize data
+2. Calculate cov matrix
+3. Calculate eigenvalues/eigenvectors
+4. Pick K eigenvalues/eigenvector
+5. Find Most important
+
+#### 6. First step, split the iris dataset into data X and class labels y
+```{r}
+X <- iris[,-5]
+y <- iris[,5]
+```
+
+### Standardizing  
+#### 7. Scale the 4 features. Store the scaled matrix into a new one (for example, name it X_scaled).
+```{r}
+X_scaled = scale(X)
+```
+
+### Covariance Matrix
+#### 8. The classic approach to PCA is to perform the eigendecomposition on the covariance matrix Σ, which is a p×p matrix where each element represents the covariance between two features. Compute the Covariance Matrix of the scaled features (Print the results).
+```{r}
+sigma = cov(X_scaled)
+sigma
+```
+
+#### 9. Perform an eigendecomposition on the covariance matrix. Compute the Eigenvectors and the Eigenvalues (you can use the eigen() function). What do you obtain?
+```{r}
+eigens = eigen(sigma)
+print(eigens$values)
+print(eigens$vectors)
+```
+We obtain a table of eigenvalues and corresponding eigenvectors.
+
+### Correlation Matrix
+#### 10. Perform an eigendecomposition of the standardized data based on the correlation matrix.
+```{r}
+eigens_corr = eigen(cor(X_scaled))
+print(eigens_corr$values)
+print(eigens_corr$vectors)
+```
+
+#### 11. Perform an eigendecomposition of the raw data based on the correlation matrix. Compare the obtained results with the previous question.
+```{r}
+eigens_corr = eigen(cor(X))
+print(eigens_corr$values)
+print(eigens_corr$vectors)
+```
+Eigenvalues and eigenvectors are the same with the three approaches.
+
+### Selecting Principal Components  
+The eigen() function will, by default, sort the eigenvalues in decreasing order.
+  
+### Explained Variance
+  
+#### 12. Calculate the individual explained variation and the cumulative explained variation of each principal component. Show the results.
+```{r}
+explained_var = eigens$values/sum(eigens$values)
+explained_var
+```
+```{r}
+cum_explained_var = cumsum(explained_var)
+cum_explained_var
+```
+
+#### 13. Plot the individual explained variation. (scree plot)
+```{r}
+plot(explained_var,type="b")
+```
+
+### Projection Matrix
+#### 14. Construct the projection matrix that will be used to transform the Iris data onto the new feature subspace.
+```{r}
+A = eigens$vectors[,1:2]
+A
+```
+
+### Projection Onto the New Feature Space
+#### 15. Compute Y (Recall the Y is the matrix of scores, A is the matrix of loadings).
+```{r}
+Y = X_scaled %*% A
+```
+
+### Visualization
+#### 16. Plot the observations on the new feature space. Name the axis PC1 and PC2.
+```{r}
+plot(Y, xlab = "PC1", ylab = "PC2", main="Plot of the data on the new feature space")
+```
+
+#### 17. On the same plot, color the observations (the flowers) with respect to their flower classes.
+```{r}
+my_cols <- c("red", "green", "blue")  
+plot(Y,col=my_cols[as.integer(as.factor(iris$class))], xlab = "PC1", ylab = "PC2", main="Plot of the data on the new feature space")
+legend(2.2, 2.7, legend=unique(iris$class),
+       col=my_cols, lty=1:2, cex=0.8)
+```
+
+## References
+FISHER, R. A. 1936. “THE USE OF MULTIPLE MEASUREMENTS IN TAXONOMIC PROBLEMS.” Annals of Eugenics 7 (2): 179–88. https://doi.org/10.1111/j.1469-1809.1936.tb02137.x.
