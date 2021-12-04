@@ -96,8 +96,13 @@ So we can say that the feature Age is significant for our model
 ### 9. What is the value of AIC of the model?
 AIC = 256.11
 
+```{r}
+typeof(data.frame(Age = x)$Age)
+```
+
 
 ### 10. Plot Purchased in function of Age and add the curve of the obtained logistic regression model.
+
 ```{r}
 library(ggplot2)
 ggplot(model_purchased_age, aes(x=Age, y=Purchased)) +
