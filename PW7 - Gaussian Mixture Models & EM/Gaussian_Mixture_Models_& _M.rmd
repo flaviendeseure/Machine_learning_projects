@@ -1,0 +1,189 @@
+---
+title: "Week 8"
+subtitle: "Gaussian Mixture Models & EM"
+author: LastName FirstName
+date: "`#r format(Sys.time())`" # remove the # to show the date
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: cerulean
+    highlight: espresso
+---
+
+# 8.1 EM using mclust
+## GMM vs k-means
+### 1. Download and import Data1 and Data2. Plot both of the datasets on the same window. Color the observations with respect to the ground truth, like in Figure 8.6.
+```{r Exercise 1.1}
+data1 = read.csv("https://www.mghassany.com/MLcourse/datasets/data1.csv")
+data2 = read.csv("https://www.mghassany.com/MLcourse/datasets/data2.csv")
+
+par(mfrow=c(1,2))
+plot(data1[1:2], main="Data1", pch=19, col=data1$truth)
+plot(data2[1:2], main="Data2", pch=19, col=data1$truth)
+```
+
+### 2. Apply k-means on both datasets with 4 clusters. Plot both of the dataset on the same window and color the observations with respect to k-means results. Interpret the results.
+```{r Exercise 1.2}
+set.seed(10)
+km.data1 <- kmeans(data1,centers=4)
+km.data2 <- kmeans(data2,centers=4)
+
+par(mfrow=c(1,2))
+plot(data1[1:2], main="Data1", pch=19, col=km.data1$cluster)
+plot(data2[1:2], main="Data2", pch=19, col=km.data2$cluster)
+```
+Kmeans gives us good results with the first dataset whereas with the second one, the results are not really good. It's because the algorithm try to minimize the distance between clusters so it is more approriate to use it when the clusters follow a circular pattern. 
+
+
+### 3. Now fit a GMM model on the datasets. To do so, load the mclust library. Then you can use the function Mclust() on your data (this function will choose automatically the number of mixtures, basing on BIC criterion). Use the clustering results from your GMM model to visualize the results on both of the datasets, color the observations with respect to the clusters obtained from the GMM model. Interpret the results.
+```{r Exercise 1.3}
+library(mclust)
+gmm.data1 = Mclust(data1[1:2])
+gmm.data2 = Mclust(data2[1:2])
+
+par(mfrow=c(1,2))
+plot(data1[1:2], main="Data1", pch=19, col=gmm.data1$classification)
+plot(data2[1:2], main="Data2", pch=19, col=gmm.data2$classification)
+```
+The results are good for both datasets, because the GMM algorithm used density to find the clusters.
+
+### 4. Show the summary of the GMM model you fitted on Data2. Explain what it shows.
+```{r Exercise 1.4}
+summary(gmm.data2)
+```
+The summary gives us:  
+- The number of samples per cluster
+- n: The number of observations in the data.
+- df: The number of estimated parameters
+- BIC: an indicator for choosing the number of components
+- ICl: an indicator for choosing the number of components
+- log-likelihood: The log-likelihood corresponding to the optimal BIC
+
+### 5. mclust package offers some visualization. To plot your two-dimensional data, use the standard plot function applied on your model. Apply the following code, given that the model is named gmm_model, and interpret what it shows.
+```{r Exercise 1.5}
+plot(gmm.data2, what = "classification")
+plot(gmm.data2, what = "uncertainty")
+```
+I displayed 2 graphs:
+- Classification: display the class for each data, it is a plot showing the clustering
+- Uncertainty: a plot of classification uncertainty
+
+### 6. mclust package uses the Bayesian Information Criterion (BIC) to choose the best number of mixtures. To see the values of BIC for different number of mixtures use the following code.
+```{r Exercise 1.6}
+plot(gmm.data2, what = "BIC")
+```
+
+### 7. Though GMM is often categorized as a clustering algorithm, fundamentally it is an algorithm for density estimation. That is to say, the result of a GMM fit to some data is technically not a clustering model, but a generative probabilistic model describing the distribution of the data. Density estimation plays an important role in applied statistical data analysis and theoretical research. A density estimate based on GMM can be obtained using the function densityMclust(). Apply it on Data2 and visualize the estimated densities (show an “image” and a “perspective” plot of the bivariate density estimate).
+```{r Exercise 1.7}
+dgg.data2 = densityMclust(data1[1:2])
+plot(dgg.data2, what = "density", type="persp", data=data2[1:2])
+plot(dgg.data2, what = "density", type="image", data=data2[1:2])
+```
+
+## EM on 1D
+### 8. Create a data table of 300 observations in which you have two columns:
+- The first column contains generated data. Those data are generated from three Gaussian - distributions with different parameters.
+- The second column corresponds to the groud truth (every observation was generated from which Gaussian).
+- Hint: functions you may need are rnorm(), rep(), rbind() or cbind().
+- You must of course set a seed (your sutdent_pk). An example of 9 generated values from three Gaussians is shown in the following table:
+```{r Exercise 1.8}
+set.seed(183838)
+r1 = rnorm(100,mean=-4,sd=1)
+r2 = rnorm(100,mean=0,sd=1)
+r3 = rnorm(100,mean=3,sd=1)
+data = data.frame(X = c(r1,r2,r3), source = c(rep(1,100),rep(2,100),rep(3,100)))
+data
+```
+
+### 9. Show your generated data on one axe (this kind of figures are called stripchart), color them with respect to ground truth, you must obtain something like:
+```{r Exercise 1.9}
+stripchart(data$X,pch=21, bg=data$source)
+```
+
+### 10. Plot the histogram corresponding to your generated data. Interpret it.
+```{r Exercise 1.10}
+hist(data$X)
+```
+We can see the 3 gaussian distributions on the histogram.
+
+### 11. Fit a GMM model on your generated data. Print the summary and visualize your results. Explain your results.
+```{r Exercise 1.11}
+gmm.data = Mclust(data$X)
+summary(gmm.data)
+
+par(mfrow=c(2,2))
+plot(gmm.data, what = "BIC")
+plot(gmm.data, what = "classification")
+plot(gmm.data, what = "uncertainty")
+plot(gmm.data, what = "density")
+```
+I displayed 4 graphs:
+- BIC: that gives the BIC value for a number of components between 1 and 9, the max value  corresponds  to the best number of components for our data
+- Classification: display the class for each data, it is a plot showing the clustering
+- Uncertainty: a plot of classification uncertainty
+- Density: display the density function associated to the data
+
+
+### 12. Apply a density estimate on your generated data and visualize it. Interpret the obtained figure.
+```{r Exercise 1.12}
+data.density.gmm = densityMclust(data$X)
+
+plot(data.density.gmm, what="density",data=data$X,breaks=20)
+```
+From the distribution, the algorithm identify the distribution function of the 3 gaussians distributions.
+
+# 8.2 EM from scratch
+In this second part of this PW you will build a GMM model from scratch, you must develop the EM technique to fit the model.
+
+### 2.1 Generate a two-dimensional dataset from a k-component Gaussian mixture density with different means and different covariance matrices. It is up to you to choose the mixing proportions {π1,…,πk}.
+```{r Exercise 2.1}
+set.seed(183838)
+n = 500
+n_r = c(130,150,220)
+r1 = matrix(rnorm(n_r[1]*2,-4,1), n_r[1], 2)
+r2 = matrix(rnorm(n_r[2]*2,0,1), n_r[2], 2)
+r3 = matrix(rnorm(n_r[3]*2,3,1), n_r[3], 2)
+data = data.frame(X1 = c(r1[,1],r2[,1],r3[,1]),
+                  X2 = c(r1[,2],r2[,2],r3[,2]))
+pi = c(130/500, 150/300, 220/300)
+plot(data)
+data
+
+```
+
+### 2.2 Implement the EM algorithm to fit a GMM on your generated data:
+- Initialize the mixing proportions and the covariance matrices (e.g., you can initialize with equal mixing proportions and Identity covariance matrices).
+- Initialize the means “randomly” (by your own choice of k).
+- In the EM training loop, store the value of the observed-data log-likelihood at each iteration.
+- At convergence, plot the log-likelihood curve.
+```{r Exercise 2.2}
+k=3
+
+means = runif(k,-10,10)
+cov = cov(data)
+pi = rep(1/k,k)
+
+
+```
+
+### 2.3 Create a function that selects the number of mixture components by computing the values of BIC criterion for k varying from 1 to 10.
+```{r Exercise 2.3}
+select_k = function(X){
+  
+}
+```
+
+### 2.4 On your generated data, compare your results obtained with the algorithm you developed and the ground truth (in terms of the chosen number of mixture components; and in terms of error rate).
+```{r Exercise 2.4}
+
+```
+
+### 2.5 Apply the algorithm you developed on Iris dataset.
+```{r Exercise 2.5}
+iris = read.table('https://www.mghassany.com/MLcourse/datasets/iris.data', header=T, sep=",")
+iris
+
+```
+
