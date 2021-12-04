@@ -1,0 +1,178 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Clustering
+## Partitional clustering: KMeans
+We will use an example with simulated data to demonstrate how the  
+k -means algorithm works. Here we simulate some data from three clusters and plot the dataset below.
+```{r}
+set.seed(1234)
+x <- rnorm(12,mean=rep(1:3,each=4),sd=0.2)
+y <- rnorm(12,mean=rep(c(1,2,1),each=4),sd=0.2)
+plot(x,y,col="blue",pch=19,cex=2)
+text(x+0.05,y+0.05,labels=as.character(1:12))
+```
+
+The kmeans() function in R implements the k-means algorithm and can be found in the stats package, which comes with R and is usually already loaded when you start R. Two key parameters that you have to specify are x, which is a matrix or data frame of data, and centers which is either an integer indicating the number of clusters or a matrix indicating the locations of the initial cluster centroids. The data should be organized so that each row is an observation and each column is a variable or feature of that observation.  
+```{r}
+dataFrame <- data.frame(x,y)
+kmeansObj <- kmeans(dataFrame,centers=3)
+names(kmeansObj)
+```
+
+You can see which cluster each data point got assigned to by looking at the cluster element of the list returned by the kmeans() function.
+```{r}
+kmeansObj$cluster
+```
+
+Here is a plot of the k-means clustering solution.
+```{r}
+plot(x,y,col=kmeansObj$cluster,pch=19,cex=2)
+points(kmeansObj$centers,col=1:3,pch=3,cex=3,lwd=3)
+```
+
+### Determine the good number of clusters
+```{r}
+n = 100
+g = 6 
+set.seed(g)
+d <- data.frame(x = unlist(lapply(1:g, function(i) rnorm(n/g, runif(1)*i^2))), 
+                y = unlist(lapply(1:g, function(i) rnorm(n/g, runif(1)*i^2))))
+plot(d)
+```
+
+#### 1. Elbow method => SSE scree plot
+```{r}
+mydata <- d
+wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+  for (i in 2:15) wss[i] <- sum(kmeans(mydata,
+                                       centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+     ylab="Within groups sum of squares")
+```
+
+#### 2. You can do partitioning around medoids to estimate the number of clusters using the pamk function in the fpc package.
+```{r}
+library(fpc)
+pamk.best <- pamk(d)
+cat("number of clusters estimated by optimum average silhouette width:", pamk.best$nc, "\n")
+plot(pam(d, pamk.best$nc))
+```
+```{r}
+# we could also do:
+library(fpc)
+asw <- numeric(20)
+for (k in 2:20)
+  asw[[k]] <- pamk(d, k) $ silinfo $ avg.width
+k.best <- which.max(asw)
+cat("silhouette-optimal number of clusters:", k.best, "\n")
+# still 4
+```
+
+#### 3. Calinsky criterion: Another approach to diagnosing how many clusters suit the data. In this case we try 1 to 10 groups.
+```{r}
+require(vegan)
+fit <- cascadeKM(scale(d, center = TRUE,  scale = TRUE), 1, 10, iter = 1000)
+plot(fit, sortg = TRUE, grpmts.plot = TRUE)
+calinski.best <- as.numeric(which.max(fit$results[2,]))
+cat("Calinski criterion optimal number of clusters:", calinski.best, "\n")
+# 5 clusters!
+```
+
+#### 4. Determine the optimal model and number of clusters according to the Bayesian Information Criterion for expectation-maximization, initialized by hierarchical clustering for parameterized Gaussian mixture models
+```{r}
+# See http://www.jstatsoft.org/v18/i06/paper
+# http://www.stat.washington.edu/research/reports/2006/tr504.pdf
+#
+library(mclust)
+# Run the function to see how many clusters
+# it finds to be optimal, set it to search for
+# at least 1 model and up 20.
+d_clust <- Mclust(as.matrix(d), G=1:20)
+m.best <- dim(d_clust$z)[2]
+cat("model-based optimal number of clusters:", m.best, "\n")
+# 4 clusters
+plot(d_clust)
+```
+
+#### 5. Affinity propagation (AP) clustering, see http://dx.doi.org/10.1126/science.1136800
+```{r}
+library(apcluster)
+d.apclus <- apcluster(negDistMat(r=2), d)
+cat("affinity propogation optimal number of clusters:", length(d.apclus@clusters), "\n")
+# 4
+heatmap(d.apclus)
+plot(d.apclus, d)
+```
+
+#### 6. Gap Statistic for Estimating the Number of Clusters. See also some code for a nice graphical output. Trying 2-10 clusters here:
+```{r}
+library(cluster)
+clusGap(d, kmeans, 10, B = 100, verbose = interactive())
+```
+
+#### 7. Clustergram
+```{r}
+library(devtools)
+source("https://raw.github.com/talgalili/R-code-snippets/master/clustergram.r")
+set.seed(500)
+Data <- scale(iris[,-5]) # notice I am scaling the vectors)
+par(cex.lab = 1.2, cex.main = .7)
+par(mfrow = c(3,2))
+for(i in 1:6) clustergram(Data, k.range = 2:8 , line.width = .004, add.center.points = T)
+```
+
+#### 8. You can do partitioning around medoids to estimate the number of clusters using the pamk function in the fpc package.
+```{r}
+library(NbClust)
+nb <- NbClust(d, diss=NULL, distance = "euclidean",
+        method = "kmeans", min.nc=2, max.nc=15, 
+        index = "alllong", alphaBeale = 0.1)
+hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
+```
+  
+  
+  
+## Hierarchical clustering
+```{r}
+# Load the dataset
+ligue1 <- read.csv("datasets/ligue1_17_18.csv", row.names=1,sep=";")
+
+# Work with standardized data
+ligue1_scaled <- data.frame(scale(ligue1))
+
+# Compute dissimilary matrix - in this case Euclidean distance
+d <- dist(ligue1_scaled)
+
+# Hierarchical clustering with complete linkage
+treeComp <- hclust(d, method = "complete")
+plot(treeComp)
+```
+
+```{r}
+# With average linkage
+treeAve <- hclust(d, method = "average")
+plot(treeAve)
+```
+```{r}
+# With single linkage
+treeSingle <- hclust(d, method = "single")
+plot(treeSingle) # Chaining
+```
+
+```{r}
+# Set the number of clusters after inspecting visually
+# the dendrogram for "long" groups of hanging leaves
+# These are the cluster assignments
+cutree(treeComp, k = 2)
+
+```
+```{r}
+ cutree(treeComp, k = 3) 
+```
+```{r}
+cutree(treeComp, k = 4) 
+```
+
